@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<meta name="theme-color" content="#08080f"/>
+<title>MatchMind</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body,#root{height:100%;width:100%;background:#08080f;overflow:hidden;}
+body{font-family:system-ui,-apple-system,sans-serif;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+</style>
+</head>
+<body>
+<div id="root"><div style="color:#00ff87;padding:40px;text-align:center;font-family:monospace;">Loading MatchMind...</div></div>
+<script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+<script type="text/babel" data-presets="react,env">
+const {useState,useRef,useEffect}=React;
+
+
+const LEAGUES=[
+  {id:"ucl",name:"Champions League",flag:"🏆",color:"#1a56db"},
+  {id:"epl",name:"Premier League",flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",color:"#3d195b"},
+  {id:"ll",name:"La Liga",flag:"🇪🇸",color:"#c60b1e"},
+  {id:"bun",name:"Bundesliga",flag:"🇩🇪",color:"#d00000"},
+  {id:"sa",name:"Serie A",flag:"🇮🇹",color:"#0066cc"},
+  {id:"l1",name:"Ligue 1",flag:"🇫🇷",color:"#003189"},
+  {id:"mls",name:"MLS",flag:"🇺🇸",color:"#002b5c"},
+  {id:"el",name:"Europa League",flag:"🟠",color:"#f05a00"},
+  {id:"ecl",name:"Conference Lg",flag:"🟢",color:"#00a651"},
+  {id:"wc",name:"World Cup 2026",flag:"🌍",color:"#c8a400"},
+  {id:"ch",name:"Championship",flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",color:"#005b99"},
+  {id:"ere",name:"Eredivisie",flag:"🇳🇱",color:"#e07000"},
+  {id:"lpt",name:"Liga Portugal",flag:"🇵🇹",color:"#006600"},
+];
+const MATCHES={
+  ucl:[
+    {id:"u1",home:"Arsenal FC",away:"Atletico Madrid",hA:"ARS",aA:"ATM",date:"Tue May 5",time:"3:00 PM EDT",hP:55,aP:22,dP:23,note:"UCL SF 2nd Leg · 1st Leg 1-1"},
+    {id:"u2",home:"Bayern Munich",away:"Paris Saint-Germain",hA:"BMU",aA:"PSG",date:"Wed May 6",time:"3:00 PM EDT",hP:57,aP:24,dP:19,note:"UCL SF 2nd Leg · PSG won 5-4 in Paris"},
+  ],
+  epl:[
+    // MW36 — verified from live sports API May 4, 2026
+    {id:"e1",home:"Liverpool FC",away:"Chelsea FC",hA:"LFC",aA:"CFC",date:"Sat May 9",time:"7:30 AM EDT",hP:51,aP:26,dP:23,note:"MW36"},
+    {id:"e2",home:"Brighton",away:"Wolverhampton",hA:"BRI",aA:"WOL",date:"Sat May 9",time:"10:00 AM EDT",hP:75,aP:10,dP:15,note:"MW36"},
+    {id:"e3",home:"Fulham FC",away:"AFC Bournemouth",hA:"FUL",aA:"BOU",date:"Sat May 9",time:"10:00 AM EDT",hP:36,aP:39,dP:25,note:"MW36"},
+    {id:"e4",home:"Sunderland AFC",away:"Manchester United",hA:"SUN",aA:"MUN",date:"Sat May 9",time:"10:00 AM EDT",hP:25,aP:50,dP:25,note:"MW36"},
+    {id:"e5",home:"Manchester City",away:"Brentford FC",hA:"MCI",aA:"BRE",date:"Sat May 9",time:"12:30 PM EDT",hP:71,aP:12,dP:17,note:"MW36"},
+    {id:"e6",home:"Burnley FC",away:"Aston Villa",hA:"BUR",aA:"AVL",date:"Sun May 10",time:"9:00 AM EDT",hP:18,aP:60,dP:22,note:"MW36"},
+    {id:"e7",home:"Crystal Palace",away:"Everton FC",hA:"CRY",aA:"EVE",date:"Sun May 10",time:"9:00 AM EDT",hP:35,aP:37,dP:28,note:"MW36"},
+    {id:"e8",home:"Nottm Forest",away:"Newcastle",hA:"NFO",aA:"NEW",date:"Sun May 10",time:"9:00 AM EDT",hP:37,aP:36,dP:27,note:"MW36"},
+    {id:"e9",home:"West Ham United",away:"Arsenal FC",hA:"WHU",aA:"ARS",date:"Sun May 10",time:"11:30 AM EDT",hP:18,aP:60,dP:22,note:"MW36"},
+    {id:"e10",home:"Tottenham Hotspur",away:"Leeds United",hA:"TOT",aA:"LEE",date:"Mon May 11",time:"3:00 PM EDT",hP:54,aP:22,dP:24,note:"MW36"},
+  ],
+  ll:[
+    {id:"l1",home:"RC Celta de Vigo",away:"Elche CF",hA:"RCC",aA:"ELC",date:"Sun May 3",time:"8:00 AM EDT",hP:55,aP:21,dP:24},
+    {id:"l2",home:"Espanyol",away:"Real Madrid",hA:"ESP",aA:"RMA",date:"Sun May 3",time:"3:00 PM EDT",hP:21,aP:55,dP:24,note:"UCL SF vs Atletico this week"},
+    {id:"l3",home:"Sevilla FC",away:"Real Sociedad",hA:"SEV",aA:"RSO",date:"Mon May 4",time:"3:00 PM EDT",hP:39,aP:33,dP:28},
+    {id:"l4",home:"FC Barcelona",away:"Real Madrid",hA:"BAR",aA:"RMA",date:"Sun May 10",time:"3:00 PM EDT",hP:54,aP:28,dP:18,note:"EL CLASICO MD35"},
+    {id:"l5",home:"Atletico Madrid",away:"RC Celta de Vigo",hA:"ATM",aA:"RCC",date:"Sat May 9",time:"12:30 PM EDT",hP:52,aP:22,dP:26,note:"MD35"},
+  ],
+  bun:[
+    {id:"b1",home:"FC St. Pauli",away:"FSV Mainz",hA:"STP",aA:"M05",date:"Sun May 3",time:"9:30 AM EDT",hP:34,aP:37,dP:29,note:"Relegation fight"},
+    {id:"b2",home:"Borussia Mgladbach",away:"Borussia Dortmund",hA:"BMG",aA:"BVB",date:"Sun May 3",time:"11:30 AM EDT",hP:26,aP:50,dP:24},
+    {id:"b3",home:"VFL Wolfsburg",away:"Bayern Munich",hA:"WOB",aA:"BMU",date:"Sat May 9",time:"12:30 PM EDT",hP:21,aP:59,dP:20,note:"UCL SF this week"},
+    {id:"b4",home:"RB Leipzig",away:"FC St. Pauli",hA:"RBL",aA:"STP",date:"Sat May 9",time:"9:30 AM EDT",hP:67,aP:14,dP:19},
+    {id:"b5",home:"Borussia Dortmund",away:"Eintracht Frankfurt",hA:"BVB",aA:"SGE",date:"Fri May 8",time:"2:30 PM EDT",hP:64,aP:17,dP:19},
+  ],
+  sa:[
+    {id:"s1",home:"Juventus Turin",away:"Hellas Verona",hA:"JUV",aA:"VER",date:"Sun May 3",time:"12:00 PM EDT",hP:81,aP:6,dP:13},
+    {id:"s2",home:"Inter Milano",away:"Parma Calcio",hA:"INT",aA:"PAR",date:"Sun May 3",time:"2:45 PM EDT",hP:80,aP:7,dP:13},
+    {id:"s3",home:"AS Roma",away:"ACF Fiorentina",hA:"ROM",aA:"FIO",date:"Mon May 4",time:"2:45 PM EDT",hP:59,aP:18,dP:23},
+    {id:"s4",home:"Lazio Rome",away:"Inter Milano",hA:"LAZ",aA:"INT",date:"Sat May 9",time:"12:00 PM EDT",hP:20,aP:55,dP:25},
+    {id:"s5",home:"US Lecce",away:"Juventus Turin",hA:"LEC",aA:"JUV",date:"Sat May 9",time:"2:45 PM EDT",hP:16,aP:63,dP:21},
+  ],
+  l1:[
+    {id:"f1",home:"Lille OSC",away:"Le Havre AC",hA:"LIL",aA:"HAC",date:"Sun May 3",time:"9:00 AM EDT",hP:69,aP:12,dP:19},
+    {id:"f2",home:"Olympique Lyon",away:"Stade Rennais",hA:"OL",aA:"REN",date:"Sun May 3",time:"2:45 PM EDT",hP:45,aP:30,dP:25},
+    {id:"f3",home:"Paris Saint-Germain",away:"Stade Brest 29",hA:"PSG",aA:"STB",date:"Sun May 10",time:"3:00 PM EDT",hP:84,aP:6,dP:10,note:"UCL SF this week"},
+    {id:"f4",home:"RC Lens",away:"FC Nantes",hA:"RCL",aA:"FCN",date:"Fri May 8",time:"2:45 PM EDT",hP:71,aP:12,dP:17},
+  ],
+  mls:[
+    {id:"m1",home:"Inter Miami CF",away:"Orlando City SC",hA:"MIA",aA:"ORL",date:"Sat May 3",time:"7:15 PM EDT",hP:74,aP:12,dP:14,note:"Messi's Miami"},
+    {id:"m2",home:"Real Salt Lake",away:"Portland Timbers",hA:"RSL",aA:"POR",date:"Sat May 3",time:"4:45 PM EDT",hP:63,aP:17,dP:20},
+    {id:"m3",home:"Columbus Crew",away:"Minnesota United",hA:"CLB",aA:"MIN",date:"Sat May 3",time:"7:30 PM EDT",hP:54,aP:22,dP:24},
+  ],
+  el:[
+    {id:"el1",home:"Freiburg",away:"Braga",hA:"SCF",aA:"BRG",date:"Thu May 7",time:"3:00 PM EDT",hP:44,aP:35,dP:21,note:"UEL SF 2nd Leg · Braga lead 2-1"},
+    {id:"el2",home:"Aston Villa",away:"Nottm Forest",hA:"AVL",aA:"NFO",date:"Thu May 7",time:"3:00 PM EDT",hP:52,aP:28,dP:20,note:"UEL SF 2nd Leg · Forest lead 1-0"},
+  ],
+  ecl:[
+    {id:"ec1",home:"Crystal Palace",away:"Shakhtar Donetsk",hA:"CRY",aA:"SHA",date:"Thu May 7",time:"3:00 PM EDT",hP:68,aP:16,dP:16,note:"UECL SF · Palace lead 3-1"},
+    {id:"ec2",home:"Strasbourg",away:"Rayo Vallecano",hA:"RCS",aA:"RVC",date:"Thu May 7",time:"3:00 PM EDT",hP:58,aP:22,dP:20,note:"UECL SF · Rayo lead 1-0"},
+  ],
+  wc:[
+    {id:"w1",home:"Mexico",away:"South Africa",hA:"MEX",aA:"RSA",date:"Thu Jun 11",time:"3:00 PM EDT",hP:62,aP:16,dP:22,note:"Group A · Estadio Azteca"},
+    {id:"w2",home:"USA",away:"Paraguay",hA:"USA",aA:"PAR",date:"Fri Jun 12",time:"9:00 PM EDT",hP:58,aP:20,dP:22,note:"Group D · SoFi Stadium"},
+    {id:"w3",home:"Brazil",away:"Morocco",hA:"BRA",aA:"MAR",date:"Sat Jun 13",time:"6:00 PM EDT",hP:55,aP:20,dP:25,note:"Group C · MetLife Stadium"},
+    {id:"w4",home:"Germany",away:"Curacoa",hA:"GER",aA:"CUR",date:"Sun Jun 14",time:"1:00 PM EDT",hP:81,aP:7,dP:12,note:"Group E · Houston"},
+    {id:"w5",home:"England",away:"Croatia",hA:"ENG",aA:"CRO",date:"Tue Jun 17",time:"4:00 PM EDT",hP:64,aP:16,dP:20,note:"Group L · AT&T Stadium"},
+    {id:"w6",home:"France",away:"Senegal",hA:"FRA",aA:"SEN",date:"Tue Jun 16",time:"3:00 PM EDT",hP:62,aP:18,dP:20,note:"Group I · MetLife Stadium"},
+    {id:"w7",home:"Argentina",away:"Austria",hA:"ARG",aA:"AUT",date:"Mon Jun 16",time:"1:00 PM EDT",hP:68,aP:14,dP:18,note:"Group J · AT&T Stadium"},
+    {id:"w8",home:"Spain",away:"Cape Verde",hA:"ESP",aA:"CPV",date:"Mon Jun 15",time:"12:00 PM EDT",hP:78,aP:8,dP:14,note:"Group H · Atlanta"},
+  ],
+  ch:[
+    {id:"ch1",home:"Coventry City",away:"Middlesbrough",hA:"COV",aA:"MID",date:"Sat May 2",time:"12:30 PM BST",hP:55,aP:25,dP:20},
+    {id:"ch2",home:"Hull City",away:"Derby County",hA:"HUL",aA:"DER",date:"Sat May 2",time:"12:30 PM BST",hP:46,aP:30,dP:24,note:"Playoff battle"},
+    {id:"ch3",home:"Championship Final",away:"Wembley",hA:"COV",aA:"IPS",date:"Sat May 23",time:"3:00 PM BST",hP:50,aP:30,dP:20,note:"🏆 Championship Final"},
+  ],
+  ere:[
+    {id:"er1",home:"Ajax",away:"PSV Eindhoven",hA:"AJX",aA:"PSV",date:"Sat May 2",time:"2:00 PM EDT",hP:36,aP:46,dP:18,note:"PSV champions"},
+    {id:"er2",home:"Feyenoord",away:"Sparta Rotterdam",hA:"FEY",aA:"SPA",date:"Sat May 2",time:"2:00 PM EDT",hP:62,aP:16,dP:22,note:"Rotterdam Derby"},
+    {id:"er3",home:"Ajax",away:"FC Utrecht",hA:"AJX",aA:"UTR",date:"Sun May 10",time:"10:45 AM EDT",hP:55,aP:24,dP:21,note:"MD33"},
+    {id:"er4",home:"PSV Eindhoven",away:"SC Heerenveen",hA:"PSV",aA:"HEE",date:"Sun May 10",time:"10:45 AM EDT",hP:82,aP:7,dP:11,note:"Champions final home game"},
+  ],
+  lpt:[
+    {id:"p1",home:"Famalicao",away:"Benfica",hA:"FAM",aA:"BEN",date:"Fri May 2",time:"3:15 PM EDT",hP:20,aP:62,dP:18,note:"Title race"},
+    {id:"p2",home:"FC Porto",away:"Alverca",hA:"FCP",aA:"ALV",date:"Fri May 2",time:"3:15 PM EDT",hP:72,aP:10,dP:18},
+    {id:"p3",home:"Sporting CP",away:"Vitoria Guimaraes",hA:"SCP",aA:"VGC",date:"Sun May 4",time:"3:15 PM EDT",hP:68,aP:14,dP:18,note:"Title race"},
+    {id:"p4",home:"Benfica",away:"Braga",hA:"BEN",aA:"BRG",date:"Sun May 10",time:"4:00 PM EDT",hP:60,aP:20,dP:20,note:"Title decider"},
+  ],
+};
+const TC={ARS:"#EF0107",LFC:"#C8102E",MCI:"#6CABDD",MUN:"#DA291C",CFC:"#034694",TOT:"#132257",AVL:"#95BFE5",NFO:"#DD0000",EVE:"#003399",NEW:"#241F20",BRI:"#0057B8",WOL:"#FDB913",SUN:"#EB172B",BOU:"#DA291C",CRY:"#1B458F",FUL:"#CC0000",WHU:"#7A263A",BRE:"#E30613",LEE:"#FFCD00",BUR:"#6C1D45",RMA:"#FEBE10",BAR:"#004D98",ATM:"#CB3524",ATH:"#EE2523",RBB:"#00954C",VCF:"#FF7900",RSO:"#004A99",SEV:"#D8262F",OSA:"#1a3c6e",ALA:"#0054A7",ESP:"#1769AA",ELC:"#009640",RCC:"#87CEEB",BMU:"#DC052D",BVB:"#FDE100",SGE:"#E1000F",LEV:"#E32219",RBL:"#DD0741",SCF:"#E3000F",WOB:"#65B32E",BMG:"#4a4a4a",FCH:"#3A5C8B",VFB:"#E32219",M05:"#C3161C",STP:"#7A1C2E",JUV:"#4a4a4a",INT:"#010EA8",ACM:"#FB090B",NAP:"#099DDC",ROM:"#8E1F2F",LAZ:"#87CEEB",ATA:"#1E3888",FIO:"#552583",SAS:"#1E4B3E",PAR:"#FFC800",VER:"#c8a400",LEC:"#c8a400",PSG:"#003087",OLM:"#2FAEE0",LIL:"#B1272B",ASM:"#E31937",OL:"#c8a400",RCL:"#DA291C",FCN:"#c8a400",HAC:"#003087",REN:"#DA291C",STB:"#6ab4dc",MIA:"#e8a0b8",ORL:"#633492",RSL:"#B22222",POR:"#00482B",CLB:"#c8a414",MIN:"#9ECEE6",PSV:"#E2001A",FEY:"#CC0000",AZ:"#CC0000",AJX:"#c8a400",UTR:"#c8a400",TWE:"#CC0000",HEE:"#003087",SPA:"#CC0000",BEN:"#CC0000",FCP:"#003087",SCP:"#006400",BRG:"#CC0000",VGC:"#006400",FAM:"#003087",COV:"#003087",IPS:"#003087",HUL:"#FF7900",MID:"#CC0000",MEX:"#006400",BRA:"#009C3B",ARG:"#74ACDF",ENG:"#003087",FRA:"#003087",GER:"#4a4a4a",ESP_W:"#CC0000",USA:"#002868",CRO:"#CC0000",AUT:"#CC0000",SEN:"#006400",CPV:"#003087",RSA:"#007A4D",PAR_W:"#003087",MAR:"#006233",CUR:"#003087",SHA:"#cc7700",RCS:"#0033A0",RVC:"#DC1F26",ALV:"#CC0000",IRL:"#169B62"};
+const gc=a=>TC[a]||"#555";
+const LOGOS={ARS:"https://media.api-sports.io/football/teams/42.png",LFC:"https://media.api-sports.io/football/teams/40.png",MCI:"https://media.api-sports.io/football/teams/50.png",MUN:"https://media.api-sports.io/football/teams/33.png",CFC:"https://media.api-sports.io/football/teams/49.png",TOT:"https://media.api-sports.io/football/teams/47.png",AVL:"https://media.api-sports.io/football/teams/66.png",NFO:"https://media.api-sports.io/football/teams/65.png",EVE:"https://media.api-sports.io/football/teams/45.png",NEW:"https://media.api-sports.io/football/teams/34.png",BRI:"https://media.api-sports.io/football/teams/51.png",WOL:"https://media.api-sports.io/football/teams/39.png",SUN:"https://media.api-sports.io/football/teams/56.png",BOU:"https://media.api-sports.io/football/teams/35.png",CRY:"https://media.api-sports.io/football/teams/52.png",FUL:"https://media.api-sports.io/football/teams/36.png",WHU:"https://media.api-sports.io/football/teams/48.png",BRE:"https://media.api-sports.io/football/teams/55.png",LEE:"https://media.api-sports.io/football/teams/63.png",BUR:"https://media.api-sports.io/football/teams/44.png",RMA:"https://media.api-sports.io/football/teams/541.png",BAR:"https://media.api-sports.io/football/teams/529.png",ATM:"https://media.api-sports.io/football/teams/530.png",ATH:"https://media.api-sports.io/football/teams/531.png",RBB:"https://media.api-sports.io/football/teams/543.png",VCF:"https://media.api-sports.io/football/teams/532.png",SEV:"https://media.api-sports.io/football/teams/536.png",ESP:"https://media.api-sports.io/football/teams/728.png",OSA:"https://media.api-sports.io/football/teams/727.png",BMU:"https://media.api-sports.io/football/teams/157.png",BVB:"https://media.api-sports.io/football/teams/165.png",SGE:"https://media.api-sports.io/football/teams/169.png",RBL:"https://media.api-sports.io/football/teams/173.png",LEV:"https://media.api-sports.io/football/teams/168.png",SCF:"https://media.api-sports.io/football/teams/160.png",WOB:"https://media.api-sports.io/football/teams/161.png",BMG:"https://media.api-sports.io/football/teams/163.png",JUV:"https://media.api-sports.io/football/teams/496.png",INT:"https://media.api-sports.io/football/teams/505.png",ACM:"https://media.api-sports.io/football/teams/489.png",NAP:"https://media.api-sports.io/football/teams/492.png",ROM:"https://media.api-sports.io/football/teams/497.png",LAZ:"https://media.api-sports.io/football/teams/487.png",ATA:"https://media.api-sports.io/football/teams/499.png",FIO:"https://media.api-sports.io/football/teams/502.png",PSG:"https://media.api-sports.io/football/teams/85.png",OLM:"https://media.api-sports.io/football/teams/81.png",LIL:"https://media.api-sports.io/football/teams/79.png",ASM:"https://media.api-sports.io/football/teams/91.png",OL:"https://media.api-sports.io/football/teams/80.png",RCL:"https://media.api-sports.io/football/teams/116.png",PSV:"https://media.api-sports.io/football/teams/369.png",FEY:"https://media.api-sports.io/football/teams/371.png",AJX:"https://media.api-sports.io/football/teams/194.png",BEN:"https://media.api-sports.io/football/teams/211.png",FCP:"https://media.api-sports.io/football/teams/212.png",SCP:"https://media.api-sports.io/football/teams/228.png",BRG:"https://media.api-sports.io/football/teams/217.png",MIA:"https://media.api-sports.io/football/teams/1602.png"};
+const PROFILES={
+  // ── EPL — verified from Sky Sports, Premier Injuries, club official sites May 4, 2026 ──
+  BMU:{rot:0.90,cup:"UCL SF vs PSG (May 6)",rotNote:"Bayern won Bundesliga. Kompany rests key starters for UCL.",won:true,morale:"high",inj:"Davies, Musiala fitness concerns"},
+  PSG:{rot:0.85,cup:"UCL SF vs Bayern (May 6)",rotNote:"PSG focused on UCL. Key starters likely rested.",morale:"electric"},
+  ARS:{rot:0.45,cup:"UCL SF vs Atletico (May 5)",rotNote:"Title race AND UCL SF. Arteta may rotate.",morale:"high"},
+  ATM:{rot:0.10,cup:"UCL SF vs Arsenal (May 5)",rotNote:"Simeone NEVER rotates. Full strength.",morale:"excellent"},
+  LFC:{rot:0.05,morale:"outstanding",inj:"Alisson, Salah doubts; Bajcetic out long-term"},
+  MUN:{rot:0.05,inj:"De Ligt out; Cunha doubt; L. Martinez red card suspension",morale:"mixed"},
+  MCI:{rot:0.10,morale:"recovering"},
+  TOT:{rot:0.10,cup:"UEL Final vs Man Utd (May 21)",rotNote:"Final is 17 days away. Full strength.",morale:"sky high"},
+  AVL:{rot:0.45,cup:"UEL SF vs Forest (May 7)",rotNote:"Villa trail 0-1. Manage league + cup.",morale:"tense",inj:"Onana out; Kamara out"},
+  NFO:{rot:0.30,cup:"UEL SF vs Villa (May 7)",rotNote:"Forest lead 1-0. Nuno may rotate.",morale:"sky high"},
+  EVE:{rot:0.05,morale:"fighting"},
+  // ── La Liga — verified from Sports Mole, ESPN, BeSoccer May 4, 2026 ──
+  RMA:{rot:0.10,morale:"determined",inj:"Mbappé hamstring (doubt); Militao out (op); Rodrygo knee (long-term); Courtois thigh"},
+  BAR:{rot:0.05,morale:"champions chasing",inj:"De Jong hamstring (6wks); Ter Stegen, Christensen out; Balde, Torre doubts"},
+  // ── Bundesliga — verified May 4, 2026 ──
+  BVB:{rot:0.10,morale:"focused"},
+  // ── Serie A — verified from Sports Mole, BetInf May 4, 2026 ──
+  INT:{rot:0.05,morale:"title race",inj:"Calhanoglu (doubt); Dumfries injury concern"},
+  ROM:{rot:0.10,morale:"top 4 push",inj:"Dybala knee; Dovbyk; Ferguson back; Hermoso, Kone out"},
+  ACM:{rot:0.10,morale:"recovering",inj:"Gimenez ankle surgery (3-4 mo)"},
+  JUV:{rot:0.05,morale:"determined"},
+  LAZ:{rot:0.10,morale:"focused"},
+};
+const FORM={LFC:["W","W","W","W","W"],ARS:["W","W","W","D","W"],MCI:["W","W","D","W","L"],MUN:["L","D","L","W","L"],EVE:["L","L","D","L","W"],BMU:["W","W","W","W","W"],PSG:["W","W","D","W","W"],ATM:["W","D","W","W","D"],JUV:["W","W","W","W","W"],INT:["W","W","W","D","W"],NFO:["W","W","W","D","W"],AVL:["W","W","D","W","W"],TOT:["W","D","W","W","L"],};
+const SUSP={MUN:["L. Martinez (red card)"]};
+const AVATARS=["⚽","🏆","🔮","⭐","🦁","🔥","💎","🚀","🦅","🐺","👑","🎯"];
+const DATA_UPDATED = "May 4, 2026"; // verified injury/suspension data
+// ── BACKEND CONFIG ──
+const BACKEND_URL = "https://matchmind-backend-production.up.railway.app";
+const BACKEND_SEASON = "2025";
+// API-Football League IDs mapping
+const LEAGUE_IDS = {
+  ucl: 2, epl: 39, laliga: 140, bun: 78, sa: 135, l1: 61,
+  mls: 253, el: 3, ecl: 848, wc: 1, ch: 40, ere: 88, lp: 94
+};
+
+function getRot(a){const p=PROFILES[a];if(!p||!p.cup)return null;return p.rot>=0.75?"high":p.rot>=0.35?"medium":null;}
+
+function predict(m,isCup){
+  const H=m.home,A=m.away,hA=m.hA,aA=m.aA;
+  const hp=PROFILES[hA]||{},ap=PROFILES[aA]||{};
+  const hf=FORM[hA],af=FORM[aA];
+  const hs=SUSP[hA]||[],as_=SUSP[aA]||[];
+  const lines=[];
+  if(hf)lines.push("📊 "+H+" last 5: "+hf.join("-"));
+  if(af)lines.push("📊 "+A+" last 5: "+af.join("-"));
+  if(hs.length)lines.push("🟥 "+H+" suspended: "+hs.join(", "));
+  if(as_.length)lines.push("🟥 "+A+" suspended: "+as_.join(", "));
+  if(hp.inj)lines.push("🚑 "+H+" injury concerns: "+hp.inj);
+  if(ap.inj)lines.push("🚑 "+A+" injury concerns: "+ap.inj);
+  if(hp.morale)lines.push("😤 "+H+" morale: "+hp.morale);
+  if(!isCup&&hp.won)lines.push("🏆 "+H+" won the league — rotating for UCL");
+  const analysis=lines.join("\n");
+  if(!isCup){
+    const hr=getRot(hA),ar=getRot(aA);
+    if(hr==="high"&&ar==="high")return{score:"1-1",winner:"Draw",conf:"33%",rot:true,hRot:{cup:hp.cup,note:hp.rotNote},aRot:{cup:ap.cup,note:ap.rotNote},analysis:"DOUBLE ROTATION ALERT: Both "+H+" ("+hp.cup+") and "+A+" ("+ap.cup+") have major cup games. Both will rotate heavily.\n\n"+analysis};
+    if(hr==="high"){const w=m.aP>40?A:"Draw";return{score:w===A?"0-1":"1-1",winner:w,conf:"42%",rot:true,hRot:{cup:hp.cup,note:hp.rotNote},analysis:"ROTATION ALERT — "+H+": "+hp.rotNote+"\n\n"+analysis};}
+    if(ar==="high"){const w=m.hP>40?H:"Draw";return{score:w===H?"1-0":"1-1",winner:w,conf:"48%",rot:true,aRot:{cup:ap.cup,note:ap.rotNote},analysis:"ROTATION ALERT — "+A+": "+ap.rotNote+"\n\n"+analysis};}
+    if(hr==="medium"||ar==="medium"){const rp=hr==="medium"?hp:ap,rT=hr==="medium"?H:A,c=Math.round(Math.max(m.hP,m.aP,m.dP)*0.85);const w=m.hP>m.aP?(m.hP>52?H:"Draw"):(m.aP>52?A:"Draw");return{score:w==="Draw"?"1-1":w===H?"1-0":"0-1",winner:w,conf:c+"%",rot:true,hRot:hr==="medium"?{cup:hp.cup,note:hp.rotNote}:null,aRot:ar==="medium"?{cup:ap.cup,note:ap.rotNote}:null,analysis:"Rotation caution — "+rT+": "+rp.rotNote+"\n\n"+analysis};}
+  }
+  let adjH=m.hP,adjA=m.aP;
+  if(hf&&hf.filter(r=>r==="W").length>=4)adjH=Math.min(adjH+5,80);
+  if(af&&af.filter(r=>r==="W").length>=4)adjA=Math.min(adjA+5,70);
+  if(hs.length)adjH=Math.max(adjH-7,10);
+  if(as_.length)adjA=Math.max(adjA-7,10);
+  let winner,score;
+  if(adjH>=58){winner=H;score="2-1";}else if(adjA>=58){winner=A;score="0-2";}else if(m.dP>=28&&Math.abs(adjH-adjA)<12){winner="Draw";score="1-1";}else if(adjH>adjA){winner=H;score="1-0";}else{winner=A;score="0-1";}
+  return{score,winner,conf:Math.round(Math.max(adjH,adjA,m.dP))+"%",rot:false,analysis};
+}
+
+// ── CONFIDENCE LEVEL HELPER ────────────────────────────────────────
+function getConfidenceLevel(m) {
+  const max = Math.max(m.hP, m.aP, m.dP);
+  if (max >= 65) return { level: "HIGH", color: "#00ff87", icon: "🟢", label: "High Confidence" };
+  if (max >= 45) return { level: "MEDIUM", color: "#ffd60a", icon: "🟡", label: "Medium Confidence" };
+  return { level: "LOW", color: "#ff6b35", icon: "🔴", label: "Low Confidence — Coin Flip" };
+}
+
+// ── RISK TAG HELPER ─────────────────────────────────────────────────
+function getRiskTag(m, isCup) {
+  const max = Math.max(m.hP, m.aP);
+  const diff = Math.abs(m.hP - m.aP);
+  if (!isCup) {
+    const hr = getRot(m.hA), ar = getRot(m.aA);
+    if (hr === "high" || ar === "high") return { tag: "ROTATION RISK", color: "#ff6b35", icon: "🔄" };
+  }
+  if (max >= 70) return { tag: "SAFE PICK", color: "#00ff87", icon: "✅" };
+  if (m.dP >= 28 && diff < 10) return { tag: "COIN FLIP", color: "#ffd60a", icon: "⚖️" };
+  if (max < 50) return { tag: "UPSET ALERT", color: "#ff6b35", icon: "⚠️" };
+  return { tag: "STANDARD", color: "#00d4ff", icon: "📊" };
+}
+
+// ── BACKEND DATA FETCHER ────────────────────────────────────────────
+async function fetchBackendFixtures(leagueId) {
+  const apiLeagueId = LEAGUE_IDS[leagueId];
+  if (!apiLeagueId) return null;
+  try {
+    const url = BACKEND_URL + "/fixtures?league=" + apiLeagueId + "&season=" + BACKEND_SEASON;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.response || null;
+  } catch(e) {
+    console.log("Backend fetch failed, using hardcoded:", e.message);
+    return null;
+  }
+}
+
+// Convert API-Football fixture to our app format
+function convertFixtureToMatch(fix, leagueId) {
+  if (!fix || !fix.fixture || !fix.teams) return null;
+  const home = fix.teams.home;
+  const away = fix.teams.away;
+  const dateObj = new Date(fix.fixture.date);
+  const now = new Date();
+  // Only show upcoming fixtures (within next 14 days) or live ones
+  const daysDiff = (dateObj - now) / (1000 * 60 * 60 * 24);
+  if (daysDiff < -1 || daysDiff > 14) return null;
+  
+  const dateStr = dateObj.toLocaleDateString("en-US", {weekday:"short", month:"short", day:"numeric"});
+  const timeStr = dateObj.toLocaleTimeString("en-US", {hour:"numeric", minute:"2-digit", hour12:true, timeZone:"America/New_York"}) + " EDT";
+  
+  // Use API-Football logos if available, otherwise fall back
+  const homeLogo = home.logo;
+  const awayLogo = away.logo;
+  
+  // Generate 3-letter abbreviations from team names
+  const abbr = (name) => {
+    const words = name.split(" ");
+    if (words.length === 1) return name.substring(0,3).toUpperCase();
+    return words.map(w => w[0]).join("").substring(0,3).toUpperCase();
+  };
+  
+  // Calculate basic probabilities based on home advantage (will be enhanced later)
+  // Default: home favored 50% / away 30% / draw 20%
+  let hP = 50, aP = 30, dP = 20;
+  
+  return {
+    id: "api_" + fix.fixture.id,
+    home: home.name,
+    away: away.name,
+    hA: abbr(home.name),
+    aA: abbr(away.name),
+    date: dateStr,
+    time: timeStr,
+    hP, aP, dP,
+    homeLogo, awayLogo,
+    fixtureId: fix.fixture.id,
+    isLive: fix.fixture.status.short === "1H" || fix.fixture.status.short === "2H" || fix.fixture.status.short === "HT",
+    backend: true,
+  };
+}
+
+// ── TOP 3 PICKS HELPER ──────────────────────────────────────────────
+function getTop3Picks(activeLeague) {
+  const allMatches = [];
+  Object.keys(MATCHES).forEach(lid => {
+    MATCHES[lid].forEach(m => {
+      const max = Math.max(m.hP, m.aP);
+      const isCup = ["ucl","el","ecl"].includes(lid);
+      // Only include high confidence picks (excluding rotation risk for non-cup)
+      if (max >= 60) {
+        let score = max;
+        // Prefer cup matches (bigger games)
+        if (isCup) score += 10;
+        // Penalize rotation risk
+        if (!isCup) {
+          const hr = getRot(m.hA), ar = getRot(m.aA);
+          if (hr === "high" || ar === "high") score -= 30;
+        }
+        allMatches.push({ ...m, leagueId: lid, score, isCup });
+      }
+    });
+  });
+  return allMatches.sort((a,b) => b.score - a.score).slice(0, 3);
+}
+
+function awayColor(hA,aA){const reds=["ARS","MUN","LFC","BOU","ATM","ACM","RCL","BEN","BRG","MID","COV"];if(reds.includes(hA)&&reds.includes(aA))return"#5b8dd9";return gc(aA);}
+
+function Logo({abbr,size=44,url}){
+  const [ok,setOk]=useState(true);
+  const c=gc(abbr);
+  // Try backend URL first, then hardcoded LOGOS, then SVG fallback
+  if(url&&ok)return <img src={url} alt={abbr} onError={()=>setOk(false)} style={{width:size,height:size,objectFit:"contain"}}/>;
+  if(LOGOS[abbr]&&ok)return <img src={LOGOS[abbr]} alt={abbr} onError={()=>setOk(false)} style={{width:size,height:size,objectFit:"contain"}}/>;
+  return(
+    <svg width={size} height={size} viewBox="0 0 44 50">
+      <path d="M22 2L42 10L42 30C42 40 32 47 22 49C12 47 2 40 2 30L2 10Z" fill={c} stroke="#ffffff22" strokeWidth="1"/>
+      <path d="M22 7L37 14L37 29C37 37 30 43 22 45C14 43 7 37 7 29L7 14Z" fill={c+"bb"}/>
+      <text x="22" y="32" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="900" fontFamily="system-ui">{abbr.slice(0,3)}</text>
+    </svg>
+  );
+}
+
+function Bar({hP,dP,aP,hA,aA}){const ac=awayColor(hA,aA);return(
+  <div>
+    <div style={{display:"flex",height:6,borderRadius:3,overflow:"hidden",gap:1}}>
+      <div style={{width:hP+"%",background:gc(hA)}}/>
+      <div style={{width:dP+"%",background:"#3a3a4a"}}/>
+      <div style={{width:aP+"%",background:ac}}/>
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#555",marginTop:4}}>
+      <span style={{color:gc(hA),fontWeight:700}}>{hA} {hP}%</span>
+      <span>Draw {dP}%</span>
+      <span style={{color:ac,fontWeight:700}}>{aA} {aP}%</span>
+    </div>
+  </div>
+);}
+
+function Card({m,onPredict,pred,loading,lid,onFav,isFav}){
+  const busy=loading===m.id;
+  const isCup=["ucl","el","ecl"].includes(lid);
+  const hr=!isCup?getRot(m.hA):null,ar=!isCup?getRot(m.aA):null;
+  const hasRot=!!(hr||ar);
+  let dH=m.hP,dA=m.aP,dD=m.dP;
+  if(hr==="high"){dH=Math.max(m.hP-22,18);dA=Math.min(m.aP+15,55);dD=Math.min(m.dP+7,38);const t=dH+dA+dD;dH=Math.round(dH/t*100);dA=Math.round(dA/t*100);dD=100-dH-dA;}
+  if(ar==="high"){dA=Math.max(m.aP-22,12);dH=Math.min(m.hP+15,65);dD=Math.min(m.dP+7,38);const t=dH+dA+dD;dH=Math.round(dH/t*100);dA=Math.round(dA/t*100);dD=100-dH-dA;}
+  return(
+    <div style={{background:"linear-gradient(145deg,#13131f,#0d0d1a)",border:"1px solid "+(hasRot?"#ff6b3520":"#ffffff0c"),borderRadius:18,padding:"16px",marginBottom:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <span style={{fontSize:10,color:"#444"}}>{m.date} · {m.time}</span>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          {m.note&&<span style={{fontSize:9,color:"#00ff87",background:"#00ff8712",padding:"2px 6px",borderRadius:4,fontWeight:700}}>{m.note}</span>}
+          <button onClick={()=>onFav(m.hA,m.home)} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:isFav(m.hA)?"#ffd60a":"#333",padding:0}}>★</button>
+        </div>
+      </div>
+      {/* Confidence + Risk tags row */}
+      <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+        {(()=>{const c=getConfidenceLevel(m);return(<span style={{fontSize:9,color:c.color,background:c.color+"15",border:"1px solid "+c.color+"33",padding:"3px 8px",borderRadius:4,fontWeight:800,letterSpacing:0.5}}>{c.icon} {c.level}</span>);})()}
+        {(()=>{const r=getRiskTag(m,isCup);return(<span style={{fontSize:9,color:r.color,background:r.color+"15",border:"1px solid "+r.color+"33",padding:"3px 8px",borderRadius:4,fontWeight:800,letterSpacing:0.5}}>{r.icon} {r.tag}</span>);})()}
+      </div>
+      <div style={{display:"flex",alignItems:"center",marginBottom:14}}>
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
+          <div style={{width:48,height:48,display:"flex",alignItems:"center",justifyContent:"center",filter:"drop-shadow(0 3px 8px "+gc(m.hA)+"55)"}}><Logo abbr={m.hA} url={m.homeLogo}/></div>
+          <div style={{fontSize:11,fontWeight:700,color:"#e0e0ee",textAlign:"center",lineHeight:1.2}}>{m.home.split(" ").slice(0,2).join(" ")}</div>
+          <div style={{fontSize:9,color:"#555",letterSpacing:1}}>HOME</div>
+        </div>
+        <div style={{textAlign:"center",minWidth:52,padding:"0 4px"}}>
+          <div style={{fontSize:9,color:"#555",letterSpacing:1,marginBottom:2}}>KICK OFF</div>
+          <div style={{fontSize:13,fontWeight:900,color:"#fff"}}>{m.time.replace(" EDT","").replace(" BST","")}</div>
+          <div style={{fontSize:9,color:"#444",marginTop:2}}>{m.date}</div>
+        </div>
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
+          <div style={{width:48,height:48,display:"flex",alignItems:"center",justifyContent:"center",filter:"drop-shadow(0 3px 8px "+awayColor(m.hA,m.aA)+"55)"}}><Logo abbr={m.aA} url={m.awayLogo}/></div>
+          <div style={{fontSize:11,fontWeight:700,color:"#e0e0ee",textAlign:"center",lineHeight:1.2}}>{m.away.split(" ").slice(0,2).join(" ")}</div>
+          <div style={{fontSize:9,color:"#555",letterSpacing:1}}>AWAY</div>
+        </div>
+      </div>
+      <Bar hP={dH} dP={dD} aP={dA} hA={m.hA} aA={m.aA}/>
+      {hasRot&&!pred&&(
+        <div style={{marginTop:10,background:"#ff6b3512",border:"1px solid #ff6b3530",borderRadius:8,padding:"8px 12px"}}>
+          <div style={{fontSize:10,color:"#ff6b35",fontWeight:800,marginBottom:3}}>ROTATION RISK</div>
+          {hr&&<div style={{fontSize:10,color:"#ffaa77"}}>🔄 {m.home}: {(PROFILES[m.hA]||{}).cup}</div>}
+          {ar&&<div style={{fontSize:10,color:"#ffaa77",marginTop:2}}>🔄 {m.away}: {(PROFILES[m.aA]||{}).cup}</div>}
+        </div>
+      )}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:12,gap:8}}>
+        <div style={{fontSize:11,color:"#666"}}>{(dH>=dA?m.home:m.away).split(" ")[0]} favored ({Math.max(dH,dA)}%){hasRot?" ⚠️":""}</div>
+        <button onClick={()=>onPredict(m)} disabled={busy} style={{background:busy?"#1a1a2e":"linear-gradient(135deg,#00ff87,#00d4ff)",color:busy?"#555":"#000",border:"none",borderRadius:10,padding:"9px 14px",fontSize:11,fontWeight:800,cursor:busy?"not-allowed":"pointer",whiteSpace:"nowrap",flexShrink:0}}>
+          {busy?"Analyzing...":"🔮 Predict"}
+        </button>
+      </div>
+      {pred&&(
+        <div style={{marginTop:14,background:pred.rot?"#ff6b350a":"#00ff870a",border:"1px solid "+(pred.rot?"#ff6b3530":"#00ff8720"),borderRadius:12,padding:14}}>
+          {pred.rot&&(pred.hRot||pred.aRot)&&(
+            <div style={{background:"#ff6b3518",border:"1px solid #ff6b3544",borderRadius:8,padding:"8px 12px",marginBottom:10}}>
+              <div style={{fontSize:11,color:"#ff6b35",fontWeight:800,marginBottom:3}}>⚠️ ROTATION RISK</div>
+              {pred.hRot&&<div style={{fontSize:11,color:"#ffaa77"}}>🔄 {m.home}: {pred.hRot.cup}</div>}
+              {pred.aRot&&<div style={{fontSize:11,color:"#ffaa77",marginTop:2}}>🔄 {m.away}: {pred.aRot.cup}</div>}
+            </div>
+          )}
+          <div style={{fontSize:11,color:pred.rot?"#ff6b35":"#00ff87",fontWeight:800,letterSpacing:1.5,marginBottom:10}}>🤖 AI DEEP ANALYSIS</div>
+          <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+            {[{l:"SCORE",v:pred.score,c:pred.rot?"#ff6b35":"#00ff87"},{l:"WINNER",v:pred.winner==="Draw"?"Draw":pred.winner.split(" ")[0],c:"#00d4ff"},{l:"CONFIDENCE",v:pred.conf,c:"#ffd60a"}].map(x=>(
+              <div key={x.l} style={{background:x.c+"10",border:"1px solid "+x.c+"22",borderRadius:8,padding:"6px 10px",textAlign:"center",flex:"1 1 60px"}}>
+                <div style={{fontSize:9,color:"#555",letterSpacing:1,marginBottom:2}}>{x.l}</div>
+                <div style={{fontSize:14,fontWeight:900,color:x.c}}>{x.v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{fontSize:12,color:"#bbb",lineHeight:1.8,whiteSpace:"pre-wrap"}}>{pred.analysis}</div>
+          {/* WHY THIS PICK — verified data only */}
+          <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid #ffffff10"}}>
+            <div style={{fontSize:10,color:"#00ff87",fontWeight:800,letterSpacing:1.5,marginBottom:8}}>📋 KEY FACTORS (verified)</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div style={{background:"#0a0a14",border:"1px solid #ffffff08",borderRadius:8,padding:"8px 10px"}}>
+                <div style={{fontSize:9,color:"#555",letterSpacing:1,marginBottom:3}}>HOME WIN</div>
+                <div style={{fontSize:14,fontWeight:900,color:gc(m.hA)}}>{m.hP}%</div>
+              </div>
+              <div style={{background:"#0a0a14",border:"1px solid #ffffff08",borderRadius:8,padding:"8px 10px"}}>
+                <div style={{fontSize:9,color:"#555",letterSpacing:1,marginBottom:3}}>AWAY WIN</div>
+                <div style={{fontSize:14,fontWeight:900,color:awayColor(m.hA,m.aA)}}>{m.aP}%</div>
+              </div>
+              <div style={{background:"#0a0a14",border:"1px solid #ffffff08",borderRadius:8,padding:"8px 10px"}}>
+                <div style={{fontSize:9,color:"#555",letterSpacing:1,marginBottom:3}}>DRAW PROB</div>
+                <div style={{fontSize:14,fontWeight:900,color:"#888"}}>{m.dP}%</div>
+              </div>
+              <div style={{background:"#0a0a14",border:"1px solid #ffffff08",borderRadius:8,padding:"8px 10px"}}>
+                <div style={{fontSize:9,color:"#555",letterSpacing:1,marginBottom:3}}>EDGE</div>
+                <div style={{fontSize:14,fontWeight:900,color:Math.abs(m.hP-m.aP)>20?"#00ff87":"#ffd60a"}}>{Math.abs(m.hP-m.aP)>20?"Strong":"Close"}</div>
+              </div>
+            </div>
+            <div style={{marginTop:10,fontSize:10,color:"#444",fontStyle:"italic",lineHeight:1.5}}>⚠️ Predictions based on form patterns and historical probabilities. Sports outcomes are unpredictable — for entertainment only.</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MatchMind(){
+  const [tab,setTab]=useState("home");
+  const [active,setActive]=useState("ucl");
+  const [preds,setPreds]=useState({});
+  const [loading,setLoading]=useState(null);
+  const [search,setSearch]=useState("");
+  const [drawer,setDrawer]=useState(false);
+  const [splash,setSplash]=useState(true);
+  const [agreed,setAgreed]=useState(()=>{try{return localStorage.getItem("mm_v2")==="y";}catch{return false;}});
+  const [checked,setChecked]=useState(false);
+  const [termsOpen,setTermsOpen]=useState(false);
+  const [isPro,setIsPro]=useState(()=>{try{return localStorage.getItem("mm_pro")==="y";}catch{return false;}});
+  const [trialStart]=useState(()=>{try{const s=localStorage.getItem("mm_ts");if(s)return parseInt(s);const n=Date.now();localStorage.setItem("mm_ts",n+"");return n;}catch{return Date.now();}});
+  const [paywallOpen,setPaywallOpen]=useState(false);
+  const [plan,setPlan]=useState("annual");
+  const [predCount,setPredCount]=useState(()=>{try{return parseInt(localStorage.getItem("mm_pc")||"0");}catch{return 0;}});
+  const [user,setUser]=useState(()=>{try{const u=localStorage.getItem("mm_user");return u?JSON.parse(u):null;}catch{return null;}});
+  const [authMode,setAuthMode]=useState(null);
+  const [authName,setAuthName]=useState("");
+  const [authEmail,setAuthEmail]=useState("");
+  const [authPass,setAuthPass]=useState("");
+  const [authMsg,setAuthMsg]=useState({err:"",ok:""});
+  const [favTeams,setFavTeams]=useState(()=>{try{return JSON.parse(localStorage.getItem("mm_fav_teams")||"[]");}catch{return[];}});
+  const [favLeagues,setFavLeagues]=useState(()=>{try{return JSON.parse(localStorage.getItem("mm_fav_leagues")||"[]");}catch{return[];}});
+  const [history,setHistory]=useState(()=>{try{return JSON.parse(localStorage.getItem("mm_history")||"[]");}catch{return[];}});
+  const [settings,setSettings]=useState(()=>{try{return JSON.parse(localStorage.getItem("mm_settings")||'{"notif":true,"odds":"pct","lang":"en"}');}catch{return{notif:true,odds:"pct",lang:"en"};}});
+  const [editAvatar,setEditAvatar]=useState(false);
+  const ref=useRef(null);
+
+  useEffect(()=>{const t=setTimeout(()=>setSplash(false),2000);return()=>clearTimeout(t);},[]);
+
+  const trialDays=Math.max(0,7-Math.floor((Date.now()-trialStart)/86400000));
+  const inTrial=trialDays>0;
+  const canPredict=isPro||inTrial||predCount<3;
+  const canAccess=lid=>isPro||inTrial||lid==="epl";
+  const league=LEAGUES.find(l=>l.id===active);
+  // Use backend fixtures if available, otherwise fall back to hardcoded
+  const baseMatches = backendFixtures[active] && backendFixtures[active].length > 0 
+    ? backendFixtures[active] 
+    : (MATCHES[active]||[]);
+  const matches=baseMatches.filter(m=>!search||m.home.toLowerCase().includes(search.toLowerCase())||m.away.toLowerCase().includes(search.toLowerCase()));
+
+  const saveUser=u=>{setUser(u);try{if(u)localStorage.setItem("mm_user",JSON.stringify(u));else localStorage.removeItem("mm_user");}catch{}};
+  const saveFav=(teams)=>{setFavTeams(teams);try{localStorage.setItem("mm_fav_teams",JSON.stringify(teams));}catch{}};
+  const saveFavL=(lgs)=>{setFavLeagues(lgs);try{localStorage.setItem("mm_fav_leagues",JSON.stringify(lgs));}catch{}};
+  const saveSetting=(k,v)=>{const n={...settings,[k]:v};setSettings(n);try{localStorage.setItem("mm_settings",JSON.stringify(n));}catch{}};
+
+  const doSignup=()=>{
+    setAuthMsg({err:"",ok:""});
+    if(!authName.trim())return setAuthMsg({err:"Enter your name",ok:""});
+    if(!authEmail.includes("@"))return setAuthMsg({err:"Enter a valid email",ok:""});
+    if(authPass.length<6)return setAuthMsg({err:"Password must be 6+ characters",ok:""});
+    const users=JSON.parse(localStorage.getItem("mm_users")||"{}");
+    if(users[authEmail])return setAuthMsg({err:"Account already exists. Please sign in.",ok:""});
+    const u={name:authName,email:authEmail,avatar:"⚽",joined:new Date().toLocaleDateString()};
+    users[authEmail]={...u,pass:authPass};
+    localStorage.setItem("mm_users",JSON.stringify(users));
+    saveUser(u);setAuthMode(null);setAuthMsg({err:"",ok:"Welcome to MatchMind, "+authName+"! 🎉"});
+    setTimeout(()=>setAuthMsg({err:"",ok:""}),3000);
+  };
+  const doLogin=()=>{
+    setAuthMsg({err:"",ok:""});
+    const users=JSON.parse(localStorage.getItem("mm_users")||"{}");
+    const found=users[authEmail];
+    if(!found)return setAuthMsg({err:"No account found",ok:""});
+    if(found.pass!==authPass)return setAuthMsg({err:"Incorrect password",ok:""});
+    saveUser({name:found.name,email:found.email,avatar:found.avatar||"⚽",joined:found.joined});
+    setAuthMode(null);setAuthMsg({err:"",ok:"Welcome back, "+found.name+"!"});
+    setTimeout(()=>setAuthMsg({err:"",ok:""}),3000);
+  };
+  const doReset=()=>{
+    const users=JSON.parse(localStorage.getItem("mm_users")||"{}");
+    if(!users[authEmail])return setAuthMsg({err:"No account found",ok:""});
+    setAuthMsg({err:"",ok:"Password reset to: matchmind123 (connect backend for real email reset)"});
+    users[authEmail].pass="matchmind123";localStorage.setItem("mm_users",JSON.stringify(users));
+  };
+  const doLogout=()=>{saveUser(null);setTab("home");};
+  const toggleFav=(abbr,name)=>{const n=favTeams.find(t=>t.abbr===abbr)?favTeams.filter(t=>t.abbr!==abbr):[...favTeams,{abbr,name}];saveFav(n);};
+  const toggleFavL=(id)=>{const n=favLeagues.includes(id)?favLeagues.filter(l=>l!==id):[...favLeagues,id];saveFavL(n);};
+  const isFav=abbr=>favTeams.some(t=>t.abbr===abbr);
+  const doAgree=()=>{if(!checked)return;try{localStorage.setItem("mm_v2","y");}catch{}setAgreed(true);};
+  const doSubscribe=()=>{try{localStorage.setItem("mm_pro","y");}catch{}setIsPro(true);setPaywallOpen(false);};
+  const doPick=id=>{if(!canAccess(id)){setPaywallOpen(true);return;}setActive(id);setSearch("");setDrawer(false);ref.current?.scrollTo({top:0,behavior:"smooth"});};
+  const doPredict=m=>{
+    if(!canPredict){setPaywallOpen(true);return;}
+    const c=predCount+1;setPredCount(c);try{localStorage.setItem("mm_pc",c+"");}catch{}
+    setLoading(m.id);
+    setTimeout(()=>{
+      const r=predict(m,["ucl","el","ecl"].includes(active));
+      setPreds(p=>({...p,[m.id]:r}));
+      const entry={id:Date.now(),home:m.home,away:m.away,date:new Date().toLocaleDateString(),prediction:r.winner,score:r.score,conf:r.conf,correct:null};
+      const next=[entry,...history].slice(0,50);setHistory(next);try{localStorage.setItem("mm_history",JSON.stringify(next));}catch{}
+      setLoading(null);
+    },1000+Math.random()*600);
+  };
+  const updateAvatar=a=>{const u={...user,avatar:a};try{const us=JSON.parse(localStorage.getItem("mm_users")||"{}");if(us[user.email]){us[user.email].avatar=a;localStorage.setItem("mm_users",JSON.stringify(us));}localStorage.setItem("mm_user",JSON.stringify(u));}catch{}setUser(u);setEditAvatar(false);};
+
+  const S={background:"#08080f",color:"#fff",fontFamily:"system-ui,sans-serif"};
+
+  if(splash)return(
+    <div style={{...S,height:"100dvh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>
+      <style>{"@keyframes sp{0%,100%{opacity:1}50%{opacity:.4}}@keyframes fi{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}"}</style>
+      <div style={{position:"absolute",inset:0,backgroundImage:"radial-gradient(circle,#00ff8706 1px,transparent 1px)",backgroundSize:"32px 32px"}}/>
+      <div style={{width:84,height:84,borderRadius:22,background:"linear-gradient(145deg,#080f14,#0d1a14)",border:"1.5px solid #00ff8740",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 50px #00ff8840",marginBottom:20,animation:"fi .6s ease both"}}>
+        <svg width="48" height="48" viewBox="0 0 52 52" fill="none">
+          <circle cx="26" cy="26" r="22" stroke="#00ff87" strokeWidth="0.5" opacity="0.2" strokeDasharray="4 4"/>
+          <polygon points="26,10 31,17 29,24 23,24 21,17" fill="#00ff87" opacity="0.9"/>
+          <polygon points="36,18 40,24 37,30 31,29 29,24 31,17" fill="#00ff87" opacity="0.45"/>
+          <polygon points="16,18 21,17 23,24 21,30 15,30 12,24" fill="#00ff87" opacity="0.45"/>
+          <polygon points="23,24 29,24 31,29 26,34 21,30" fill="#00ff87" opacity="0.7"/>
+          <circle cx="26" cy="10" r="2.5" fill="#00ff87"/><circle cx="36" cy="18" r="2" fill="#00ff87" opacity="0.8"/><circle cx="16" cy="18" r="2" fill="#00ff87" opacity="0.8"/>
+        </svg>
+      </div>
+      <div style={{fontFamily:"monospace",fontSize:26,fontWeight:900,background:"linear-gradient(90deg,#00ff87,#00d4ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8,animation:"fi .6s ease .2s both"}}>MatchMind</div>
+      <div style={{fontSize:10,color:"#3a3a4a",letterSpacing:4,textTransform:"uppercase",animation:"fi .6s ease .35s both"}}>AI Sport Predictions</div>
+      <div style={{display:"flex",gap:8,marginTop:36,animation:"fi .6s ease .5s both"}}>
+        {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:"#00ff87",animation:"sp 1.2s ease-in-out "+(i*.2)+"s infinite"}}/>)}
+      </div>
+    </div>
+  );
+
+  if(!agreed)return(
+    <div style={{...S,height:"100dvh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,overflow:"hidden",position:"relative"}}>
+      <div style={{position:"absolute",inset:0,backgroundImage:"radial-gradient(circle,#00ff8706 1px,transparent 1px)",backgroundSize:"32px 32px",pointerEvents:"none"}}/>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:24}}>
+        <div style={{width:46,height:46,borderRadius:13,background:"linear-gradient(145deg,#080f14,#0d1a14)",border:"1.5px solid #00ff8735",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <svg width="26" height="26" viewBox="0 0 52 52" fill="none">
+            <polygon points="26,10 31,17 29,24 23,24 21,17" fill="#00ff87" opacity="0.9"/>
+            <polygon points="36,18 40,24 37,30 31,29 29,24 31,17" fill="#00ff87" opacity="0.5"/>
+            <polygon points="16,18 21,17 23,24 21,30 15,30 12,24" fill="#00ff87" opacity="0.5"/>
+            <polygon points="23,24 29,24 31,29 26,34 21,30" fill="#00ff87" opacity="0.7"/>
+            <circle cx="26" cy="10" r="2.5" fill="#00ff87"/>
+          </svg>
+        </div>
+        <div style={{fontFamily:"monospace",fontSize:20,fontWeight:900,background:"linear-gradient(90deg,#00ff87,#00d4ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>MatchMind</div>
+      </div>
+      <div style={{width:"100%",maxWidth:400,background:"#111118",border:"1px solid #ffffff10",borderRadius:20,padding:"20px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,background:"#ff6b3512",border:"1px solid #ff6b3530",borderRadius:10,padding:"10px 14px",marginBottom:16}}>
+          <span style={{fontSize:18}}>⚖️</span>
+          <div><div style={{fontSize:12,fontWeight:800,color:"#ff9966"}}>Before You Continue</div><div style={{fontSize:11,color:"#775544",marginTop:1}}>Please read and agree to our terms</div></div>
+        </div>
+        {["🎯 Predictions are for entertainment only","🎰 NOT a gambling service — never bet based solely on our predictions","⚠️ AI predictions can be wrong — no accuracy guarantee","🛡️ Owner accepts no liability for decisions made using this app"].map((t,i)=>(
+          <div key={i} style={{display:"flex",gap:10,marginBottom:10}}>
+            <span style={{fontSize:13,flexShrink:0}}>{t.split(" ")[0]}</span>
+            <span style={{fontSize:12,color:"#888",lineHeight:1.6}}>{t.split(" ").slice(1).join(" ")}</span>
+          </div>
+        ))}
+        <button onClick={()=>setTermsOpen(!termsOpen)} style={{width:"100%",background:"#ffffff08",border:"1px solid #ffffff12",borderRadius:8,padding:"8px",fontSize:11,color:"#00d4ff",cursor:"pointer",fontWeight:700,marginBottom:8}}>📄 View Terms of Service</button>
+        {termsOpen&&<div style={{background:"#0a0a14",border:"1px solid #ffffff08",borderRadius:10,padding:12,marginBottom:10,maxHeight:140,overflowY:"auto",fontSize:11,color:"#666",lineHeight:1.7}}>
+          <b style={{color:"#aaa"}}>MatchMind Terms of Service — May 2025</b><br/><br/>
+          1. Entertainment only — not professional advice.<br/>2. No accuracy guarantee.<br/>3. Not gambling advice — we do not endorse betting.<br/>4. Zero liability for any losses or decisions.<br/>5. Subscriptions auto-renew — cancel via App Store or Google Play.<br/>6. GDPR/CCPA: No personal data collected or stored externally.<br/>7. Apple EULA applies to iOS version. Apple is not responsible for app content.<br/>8. Disputes resolved by binding arbitration.<br/>9. Must be 18+ or have parental consent.
+        </div>}
+        <div onClick={()=>setChecked(!checked)} style={{display:"flex",alignItems:"flex-start",gap:12,cursor:"pointer",marginBottom:14,padding:12,background:checked?"#00ff8710":"#ffffff06",border:"1px solid "+(checked?"#00ff8740":"#ffffff10"),borderRadius:10}}>
+          <div style={{width:22,height:22,borderRadius:6,border:"2px solid "+(checked?"#00ff87":"#444"),background:checked?"#00ff87":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>
+            {checked&&<span style={{fontSize:14,color:"#000",fontWeight:900}}>✓</span>}
+          </div>
+          <span style={{fontSize:12,color:"#888",lineHeight:1.6}}>I am 18+ and agree to the Terms of Service and Privacy Policy. Predictions are for entertainment only.</span>
+        </div>
+        <button onClick={doAgree} disabled={!checked} style={{width:"100%",background:checked?"linear-gradient(135deg,#00ff87,#00d4ff)":"#1a1a2e",color:checked?"#000":"#333",border:"none",borderRadius:12,padding:14,fontSize:15,fontWeight:900,cursor:checked?"pointer":"not-allowed"}}>
+          {checked?"✓ I Agree — Enter MatchMind":"Check the box above to continue"}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── PROFILE TAB ─────────────────────────────────────────────────────
+  const ProfileTab=()=>(
+    <div style={{flex:1,overflowY:"auto",padding:"16px 16px 80px"}}>
+      {authMsg.ok&&<div style={{background:"#00ff8715",border:"1px solid #00ff8730",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:12,color:"#00ff87"}}>{authMsg.ok}</div>}
+      {authMsg.err&&<div style={{background:"#ff444415",border:"1px solid #ff444430",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:12,color:"#ff6b6b"}}>{authMsg.err}</div>}
+      {!user?(
+        <>
+          {!authMode&&(
+            <div style={{background:"#111118",border:"1px solid #ffffff10",borderRadius:18,padding:"32px 20px",textAlign:"center",marginBottom:12}}>
+              <div style={{fontSize:56,marginBottom:12}}>👤</div>
+              <div style={{fontSize:16,fontWeight:800,color:"#fff",marginBottom:6}}>Join MatchMind</div>
+              <div style={{fontSize:12,color:"#555",marginBottom:20}}>Save favorites, track predictions, sync across devices</div>
+              <button onClick={()=>{setAuthMode("signup");setAuthMsg({err:"",ok:""}); }} style={{width:"100%",background:"linear-gradient(135deg,#00ff87,#00d4ff)",color:"#000",border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:900,cursor:"pointer",marginBottom:8}}>Create Free Account</button>
+              <button onClick={()=>{setAuthMode("login");setAuthMsg({err:"",ok:""}); }} style={{width:"100%",background:"#ffffff08",border:"1px solid #ffffff15",borderRadius:12,padding:"13px",fontSize:14,fontWeight:700,color:"#aaa",cursor:"pointer"}}>Sign In</button>
+            </div>
+          )}
+          {(authMode==="signup"||authMode==="login")&&(
+            <div style={{background:"#111118",border:"1px solid #ffffff10",borderRadius:18,padding:"24px 20px"}}>
+              <div style={{fontSize:16,fontWeight:800,color:"#fff",marginBottom:16}}>{authMode==="signup"?"Create Account":"Sign In"}</div>
+              {authMode==="signup"&&<input type="text" placeholder="Your name" value={authName} onChange={e=>setAuthName(e.target.value)} style={{width:"100%",background:"#ffffff08",border:"1px solid #ffffff12",borderRadius:10,padding:"11px 14px",color:"#fff",fontSize:13,outline:"none",marginBottom:8}}/>}
+              <input type="email" placeholder="Email address" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} style={{width:"100%",background:"#ffffff08",border:"1px solid #ffffff12",borderRadius:10,padding:"11px 14px",color:"#fff",fontSize:13,outline:"none",marginBottom:8}}/>
+              <input type="password" placeholder={authMode==="signup"?"Password (min 6 chars)":"Password"} value={authPass} onChange={e=>setAuthPass(e.target.value)} style={{width:"100%",background:"#ffffff08",border:"1px solid #ffffff12",borderRadius:10,padding:"11px 14px",color:"#fff",fontSize:13,outline:"none",marginBottom:12}}/>
+              <button onClick={authMode==="signup"?doSignup:doLogin} style={{width:"100%",background:"linear-gradient(135deg,#00ff87,#00d4ff)",color:"#000",border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:900,cursor:"pointer",marginBottom:8}}>{authMode==="signup"?"Create Account":"Sign In"}</button>
+              {authMode==="login"&&<button onClick={()=>setAuthMode("reset")} style={{display:"block",width:"100%",background:"none",border:"none",color:"#00d4ff",fontSize:12,cursor:"pointer",padding:"6px"}}>Forgot password?</button>}
+              <button onClick={()=>setAuthMode(authMode==="signup"?"login":"signup")} style={{display:"block",width:"100%",background:"none",border:"none",color:"#555",fontSize:12,cursor:"pointer"}}>{authMode==="signup"?"Already have an account? Sign in":"No account? Sign up free"}</button>
+              <button onClick={()=>setAuthMode(null)} style={{display:"block",width:"100%",background:"none",border:"none",color:"#333",fontSize:11,cursor:"pointer",marginTop:4}}>Cancel</button>
+            </div>
+          )}
+          {authMode==="reset"&&(
+            <div style={{background:"#111118",border:"1px solid #ffffff10",borderRadius:18,padding:"24px 20px"}}>
+              <div style={{fontSize:16,fontWeight:800,color:"#fff",marginBottom:8}}>Reset Password</div>
+              <input type="email" placeholder="Email address" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} style={{width:"100%",background:"#ffffff08",border:"1px solid #ffffff12",borderRadius:10,padding:"11px 14px",color:"#fff",fontSize:13,outline:"none",marginBottom:10}}/>
+              <button onClick={doReset} style={{width:"100%",background:"linear-gradient(135deg,#00ff87,#00d4ff)",color:"#000",border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:900,cursor:"pointer",marginBottom:8}}>Send Reset Link</button>
+              <button onClick={()=>setAuthMode("login")} style={{display:"block",width:"100%",background:"none",border:"none",color:"#555",fontSize:12,cursor:"pointer"}}>Back to sign in</button>
+            </div>
+          )}
+        </>
+      ):(
+        <>
+          <div style={{background:"linear-gradient(135deg,#111118,#0d0d1a)",border:"1px solid #ffffff0f",borderRadius:18,padding:"20px",marginBottom:12}}>
+            <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:12}}>
+              <div onClick={()=>setEditAvatar(true)} style={{width:58,height:58,borderRadius:"50%",background:"linear-gradient(135deg,#00ff87,#00d4ff)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,cursor:"pointer",boxShadow:"0 4px 20px #00ff8740",flexShrink:0,position:"relative"}}>
+                {user.avatar||"⚽"}
+                <div style={{position:"absolute",bottom:0,right:0,width:18,height:18,borderRadius:"50%",background:"#00ff87",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9}}>✏️</div>
+              </div>
+              <div>
+                <div style={{fontSize:17,fontWeight:900,color:"#fff"}}>{user.name}</div>
+                <div style={{fontSize:12,color:"#555"}}>{user.email}</div>
+                <div style={{fontSize:11,color:"#444"}}>Member since {user.joined}</div>
+              </div>
+            </div>
+            {editAvatar&&(
+              <div style={{background:"#0a0a14",border:"1px solid #ffffff10",borderRadius:12,padding:"12px",marginBottom:10}}>
+                <div style={{fontSize:10,color:"#555",marginBottom:8,letterSpacing:1}}>CHOOSE AVATAR</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  {AVATARS.map(a=><button key={a} onClick={()=>updateAvatar(a)} style={{width:40,height:40,borderRadius:"50%",background:user.avatar===a?"linear-gradient(135deg,#00ff87,#00d4ff)":"#ffffff10",border:user.avatar===a?"2px solid #00ff87":"2px solid transparent",fontSize:20,cursor:"pointer"}}>{a}</button>)}
+                </div>
+                <button onClick={()=>setEditAvatar(false)} style={{display:"block",marginTop:8,background:"none",border:"none",color:"#444",fontSize:11,cursor:"pointer"}}>Cancel</button>
+              </div>
+            )}
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{background:isPro?"linear-gradient(90deg,#00ff87,#00d4ff)":inTrial?"#ffd60a18":"#ffffff08",border:isPro?"none":inTrial?"1px solid #ffd60a44":"1px solid #ffffff10",borderRadius:20,padding:"4px 12px",display:"inline-flex",alignItems:"center",gap:5}}>
+                <span style={{fontSize:11}}>{isPro?"⚡":inTrial?"🕐":"🔓"}</span>
+                <span style={{fontSize:11,fontWeight:800,color:isPro?"#000":inTrial?"#ffd60a":"#555"}}>{isPro?"Pro":inTrial?"Trial — "+trialDays+"d":"Free"}</span>
+              </div>
+              {!isPro&&<button onClick={()=>setPaywallOpen(true)} style={{background:"linear-gradient(90deg,#00ff87,#00d4ff)",border:"none",borderRadius:10,padding:"5px 12px",fontSize:11,fontWeight:900,color:"#000",cursor:"pointer"}}>Upgrade</button>}
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+            {[{l:"Picks",v:history.length,i:"🔮"},{l:"Fav Teams",v:favTeams.length,i:"⭐"},{l:"Leagues",v:favLeagues.length,i:"🏆"}].map(s=>(
+              <div key={s.l} style={{background:"#111118",border:"1px solid #ffffff08",borderRadius:12,padding:"12px 8px",textAlign:"center"}}>
+                <div style={{fontSize:16}}>{s.i}</div>
+                <div style={{fontSize:20,fontWeight:900,color:"#fff",margin:"2px 0"}}>{s.v}</div>
+                <div style={{fontSize:9,color:"#555",letterSpacing:1}}>{s.l.toUpperCase()}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{fontSize:11,color:"#00ff87",fontWeight:800,letterSpacing:1.5,marginBottom:8}}>SETTINGS</div>
+          <div style={{background:"#111118",border:"1px solid #ffffff08",borderRadius:14,overflow:"hidden",marginBottom:12}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",borderBottom:"1px solid #ffffff08"}}>
+              <span style={{fontSize:18}}>🔔</span><span style={{fontSize:13,color:"#aaa",flex:1}}>Notifications</span>
+              <div onClick={()=>saveSetting("notif",!settings.notif)} style={{width:44,height:24,borderRadius:12,background:settings.notif?"#00ff87":"#333",cursor:"pointer",position:"relative"}}>
+                <div style={{position:"absolute",top:3,left:settings.notif?22:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .2s"}}/>
+              </div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px"}}>
+              <span style={{fontSize:18}}>🌍</span><span style={{fontSize:13,color:"#aaa",flex:1}}>Language</span>
+              <select value={settings.lang} onChange={e=>saveSetting("lang",e.target.value)} style={{background:"#ffffff10",border:"1px solid #ffffff15",borderRadius:6,padding:"4px 8px",color:"#aaa",fontSize:12,cursor:"pointer"}}>
+                {["en","es","de","fr","it","pt"].map(o=><option key={o} value={o} style={{background:"#111118"}}>{o}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{fontSize:11,color:"#00ff87",fontWeight:800,letterSpacing:1.5,marginBottom:8}}>SUPPORT</div>
+          <div style={{background:"#111118",border:"1px solid #ffffff08",borderRadius:14,overflow:"hidden",marginBottom:12}}>
+            {[{label:"Contact Support",icon:"📧",action:()=>alert("matchmind.app@gmail.com")},{label:"Rate MatchMind",icon:"⭐",action:()=>alert("Opens App Store")},{label:"App Version v1.0.0",icon:"ℹ️",action:()=>{}}].map((s,i,arr)=>(
+              <div key={s.label} onClick={s.action} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",borderBottom:i<arr.length-1?"1px solid #ffffff08":"none",cursor:"pointer"}}>
+                <span style={{fontSize:18}}>{s.icon}</span><span style={{fontSize:13,color:"#aaa",flex:1}}>{s.label}</span><span style={{color:"#444",fontSize:14}}>›</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={doLogout} style={{width:"100%",background:"transparent",border:"1px solid #ff444433",borderRadius:12,padding:"13px",fontSize:14,fontWeight:700,color:"#ff6b6b",cursor:"pointer"}}>Sign Out</button>
+        </>
+      )}
+    </div>
+  );
+
+  // ── FAVORITES TAB ────────────────────────────────────────────────────
+  const FavTab=()=>(
+    <div style={{flex:1,overflowY:"auto",padding:"16px 16px 80px"}}>
+      <div style={{fontSize:18,fontWeight:900,color:"#fff",marginBottom:4}}>Favorites</div>
+      <div style={{fontSize:12,color:"#555",marginBottom:16}}>Your saved leagues and teams</div>
+      <div style={{fontSize:11,color:"#00ff87",fontWeight:800,letterSpacing:1.5,marginBottom:10}}>LEAGUES</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}}>
+        {LEAGUES.map(l=>(
+          <button key={l.id} onClick={()=>toggleFavL(l.id)} style={{display:"flex",alignItems:"center",gap:6,background:favLeagues.includes(l.id)?l.color+"33":"#ffffff08",border:"1px solid "+(favLeagues.includes(l.id)?l.color:"#ffffff12"),borderRadius:20,padding:"7px 12px",cursor:"pointer"}}>
+            <span style={{fontSize:14}}>{l.flag}</span>
+            <span style={{fontSize:12,color:favLeagues.includes(l.id)?"#fff":"#666",fontWeight:favLeagues.includes(l.id)?700:400}}>{l.name}</span>
+            <span style={{color:favLeagues.includes(l.id)?"#ffd60a":"#444"}}>{favLeagues.includes(l.id)?"★":"☆"}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{fontSize:11,color:"#00ff87",fontWeight:800,letterSpacing:1.5,marginBottom:10}}>TEAMS</div>
+      {favTeams.length===0?(
+        <div style={{background:"#111118",border:"1px solid #ffffff08",borderRadius:14,padding:"32px 20px",textAlign:"center"}}>
+          <div style={{fontSize:32,marginBottom:10}}>⭐</div>
+          <div style={{fontSize:13,color:"#555"}}>No favorite teams yet</div>
+          <div style={{fontSize:11,color:"#444",marginTop:4}}>Tap ★ on any match card to save a team</div>
+        </div>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {favTeams.map(t=>(
+            <div key={t.abbr} style={{background:"#111118",border:"1px solid "+gc(t.abbr)+"33",borderRadius:12,padding:"12px",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:32,height:32,flexShrink:0}}><Logo abbr={t.abbr} size={32}/></div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#e0e0ee",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</div>
+              </div>
+              <button onClick={()=>toggleFav(t.abbr,t.name)} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#ffd60a",padding:0}}>★</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {favLeagues.length>0&&(
+        <div style={{marginTop:20}}>
+          <div style={{fontSize:11,color:"#00ff87",fontWeight:800,letterSpacing:1.5,marginBottom:10}}>QUICK ACCESS</div>
+          {favLeagues.map(lid=>{const l=LEAGUES.find(x=>x.id===lid);if(!l)return null;return(
+            <button key={lid} onClick={()=>{if(!canAccess(lid)){setPaywallOpen(true);return;}setActive(lid);setTab("home");}} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:"#111118",border:"1px solid "+l.color+"22",borderRadius:12,padding:"12px 16px",marginBottom:8,cursor:"pointer",textAlign:"left"}}>
+              <span style={{fontSize:22}}>{l.flag}</span>
+              <div><div style={{fontSize:13,fontWeight:700,color:"#fff"}}>{l.name}</div><div style={{fontSize:11,color:"#555"}}>{(MATCHES[l.id]||[]).length} matches</div></div>
+              <span style={{marginLeft:"auto",color:l.color,fontSize:14}}>→</span>
+            </button>
+          );})}
+        </div>
+      )}
+    </div>
+  );
+
+  // ── HISTORY TAB ─────────────────────────────────────────────────────
+  const HistTab=()=>{
+    const total=history.length,correct=history.filter(h=>h.correct===true).length;
+    const acc=total>0?Math.round((correct/total)*100):0;
+    const streak=(()=>{let s=0;for(let i=0;i<history.length;i++){if(history[i].correct===true)s++;else break;}return s;})();
+    return(
+      <div style={{flex:1,overflowY:"auto",padding:"16px 16px 80px"}}>
+        <div style={{fontSize:18,fontWeight:900,color:"#fff",marginBottom:4}}>My Predictions</div>
+        <div style={{fontSize:12,color:"#555",marginBottom:16}}>Track your prediction record</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
+          {[{l:"Total",v:total,c:"#00d4ff",i:"🔮"},{l:"Accuracy",v:total>0?acc+"%":"—",c:acc>=55?"#00ff87":acc>=45?"#ffd60a":"#ff6b35",i:"🎯"},{l:"Streak",v:streak>0?streak+"🔥":"—",c:"#ffd60a",i:"⚡"}].map(s=>(
+            <div key={s.l} style={{background:"#111118",border:"1px solid "+s.c+"22",borderRadius:12,padding:"14px 8px",textAlign:"center"}}>
+              <div style={{fontSize:18}}>{s.i}</div>
+              <div style={{fontSize:20,fontWeight:900,color:s.c,margin:"4px 0"}}>{s.v}</div>
+              <div style={{fontSize:9,color:"#555",letterSpacing:1}}>{s.l.toUpperCase()}</div>
+            </div>
+          ))}
+        </div>
+        {history.length===0?(
+          <div style={{background:"#111118",border:"1px solid #ffffff08",borderRadius:14,padding:"40px 20px",textAlign:"center"}}>
+            <div style={{fontSize:40,marginBottom:12}}>🔮</div>
+            <div style={{fontSize:13,color:"#555"}}>No predictions yet</div>
+            <div style={{fontSize:11,color:"#444",marginTop:4}}>Tap Predict on any match to start</div>
+          </div>
+        ):(
+          <>
+            {history.map(h=>(
+              <div key={h.id} style={{background:"#111118",border:"1px solid "+(h.correct===true?"#00ff8722":h.correct===false?"#ff444422":"#ffffff08"),borderRadius:12,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+                <div style={{fontSize:20,flexShrink:0}}>{h.correct===true?"✅":h.correct===false?"❌":"🔮"}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#e0e0ee",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.home} vs {h.away}</div>
+                  <div style={{fontSize:11,color:"#666",marginTop:2}}>Predicted: <span style={{color:"#00d4ff"}}>{h.prediction}</span> · {h.conf}</div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontSize:11,color:"#555"}}>{h.date}</div>
+                  <div style={{fontSize:10,color:"#444",marginTop:2}}>{h.correct===null?"Pending":"—"}</div>
+                </div>
+              </div>
+            ))}
+            <button onClick={()=>{setHistory([]);try{localStorage.removeItem("mm_history");}catch{}}} style={{display:"block",margin:"12px auto 0",background:"transparent",border:"1px solid #ff444433",borderRadius:8,padding:"7px 18px",fontSize:11,color:"#ff4444",cursor:"pointer"}}>Clear History</button>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  return(
+    <div style={{height:"100dvh",background:"#08080f",color:"#fff",fontFamily:"system-ui,sans-serif",display:"flex",flexDirection:"column",overflow:"hidden",maxWidth:480,margin:"0 auto",position:"relative"}}>
+      <style>{"@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#222;border-radius:3px}input::placeholder{color:#444}select option{background:#111118}"}</style>
+      <div style={{background:"#08080f",borderBottom:"1px solid #ffffff09",padding:"12px 16px 0",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:40,height:40,borderRadius:11,background:"linear-gradient(145deg,#080f14,#0d1a14)",border:"1.5px solid #00ff8735",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 18px #00ff8728",flexShrink:0}}>
+              <svg width="24" height="24" viewBox="0 0 52 52" fill="none">
+                <circle cx="26" cy="26" r="22" stroke="#00ff87" strokeWidth="0.5" opacity="0.2" strokeDasharray="4 4"/>
+                <polygon points="26,10 31,17 29,24 23,24 21,17" fill="#00ff87" opacity="0.9"/>
+                <polygon points="36,18 40,24 37,30 31,29 29,24 31,17" fill="#00ff87" opacity="0.45"/>
+                <polygon points="16,18 21,17 23,24 21,30 15,30 12,24" fill="#00ff87" opacity="0.45"/>
+                <polygon points="23,24 29,24 31,29 26,34 21,30" fill="#00ff87" opacity="0.7"/>
+                <circle cx="26" cy="10" r="2.5" fill="#00ff87"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{fontFamily:"monospace",fontSize:17,fontWeight:900,background:"linear-gradient(90deg,#00ff87,#00d4ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>MatchMind</div>
+              <div style={{fontSize:8,color:"#444",letterSpacing:2,textTransform:"uppercase"}}>AI Sport Predictions</div>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:7}}>
+            {isPro?<div style={{background:"linear-gradient(90deg,#00ff87,#00d4ff)",borderRadius:20,padding:"3px 10px",fontSize:10,fontWeight:900,color:"#000"}}>PRO</div>
+            :inTrial?<div onClick={()=>setPaywallOpen(true)} style={{background:"#ffd60a18",border:"1px solid #ffd60a40",borderRadius:20,padding:"3px 10px",fontSize:10,fontWeight:800,color:"#ffd60a",cursor:"pointer"}}>{trialDays}d trial</div>
+            :<div onClick={()=>setPaywallOpen(true)} style={{background:"linear-gradient(90deg,#00ff87,#00d4ff)",borderRadius:20,padding:"3px 10px",fontSize:10,fontWeight:900,color:"#000",cursor:"pointer"}}>Go Pro</div>}
+            <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:6,height:6,borderRadius:"50%",background:"#00ff87",animation:"pulse 2s infinite"}}/><span style={{fontSize:9,color:"#00ff87",fontWeight:700}}>LIVE</span></div>
+            <button onClick={()=>setDrawer(true)} style={{background:"#ffffff0c",border:"1px solid #ffffff12",borderRadius:8,width:32,height:32,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,cursor:"pointer",flexShrink:0}}>
+              {[0,1,2].map(i=><div key={i} style={{width:12,height:1.5,background:"#888",borderRadius:2}}/>)}
+            </button>
+          </div>
+        </div>
+        {tab==="home"&&(
+          <>
+            <div style={{display:"flex",alignItems:"center",gap:10,background:league.color+"18",border:"1px solid "+league.color+"33",borderRadius:12,padding:"7px 12px",marginBottom:10}}>
+              <span style={{fontSize:18}}>{league.flag}</span>
+              <div><div style={{fontSize:13,fontWeight:800}}>{league.name}</div><div style={{fontSize:10,color:"#666"}}>{matches.length} matches</div></div>
+              <button onClick={()=>setDrawer(true)} style={{marginLeft:"auto",background:"#ffffff0c",border:"1px solid #ffffff15",borderRadius:8,padding:"4px 10px",fontSize:11,color:"#aaa",cursor:"pointer"}}>Switch ›</button>
+            </div>
+            <div style={{position:"relative",marginBottom:10}}>
+              <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:"#444",fontSize:13}}>🔍</span>
+              <input placeholder="Search teams..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:"100%",background:"#ffffff07",border:"1px solid #ffffff10",borderRadius:10,padding:"8px 12px 8px 32px",color:"#fff",fontSize:13,outline:"none"}}/>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6,fontSize:9,color:"#444",marginBottom:4}}>
+              <span style={{width:5,height:5,borderRadius:"50%",background:backendFixtures[active]?"#00ff87":"#ffd60a",animation:backendLoading?"pulse 1s infinite":"none"}}/>
+              <span>{backendLoading?"Fetching live data...":backendFixtures[active]?"Live data · Auto-updated":"Cached data · "+DATA_UPDATED}</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {tab==="home"&&<div ref={ref} style={{flex:1,overflowY:"auto",padding:"10px 14px 80px"}}>
+        {/* TODAY'S TOP 3 PICKS BANNER */}
+        {(()=>{const top3=getTop3Picks(active);if(top3.length===0)return null;return(
+          <div style={{background:"linear-gradient(135deg,#00ff8718,#00d4ff18)",border:"1px solid #00ff8733",borderRadius:14,padding:"12px 14px",marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:14}}>🎯</span>
+                <span style={{fontSize:11,fontWeight:900,color:"#00ff87",letterSpacing:1}}>TOP 3 PICKS TODAY</span>
+              </div>
+              <span style={{fontSize:9,color:"#555"}}>High confidence only</span>
+            </div>
+            {top3.map((p,i)=>{const lg=LEAGUES.find(l=>l.id===p.leagueId);const max=Math.max(p.hP,p.aP);const winner=p.hP>p.aP?p.home:p.away;return(
+              <div key={p.id} onClick={()=>{setActive(p.leagueId);setSearch("");}} style={{display:"flex",alignItems:"center",gap:10,padding:"8px",cursor:"pointer",borderRadius:8,background:i===0?"#00ff870a":"transparent",marginBottom:i<2?4:0}}>
+                <div style={{fontSize:14,fontWeight:900,color:i===0?"#00ff87":i===1?"#ffd60a":"#888",minWidth:18}}>{i+1}.</div>
+                <span style={{fontSize:14}}>{lg?lg.flag:"⚽"}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#e0e0ee",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{winner.split(" ").slice(0,2).join(" ")} favored</div>
+                  <div style={{fontSize:9,color:"#666"}}>{p.home.split(" ")[0]} vs {p.away.split(" ")[0]} · {p.date}</div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontSize:13,fontWeight:900,color:"#00ff87"}}>{max}%</div>
+                  <div style={{fontSize:8,color:"#555",letterSpacing:1}}>CONF</div>
+                </div>
+              </div>
+            );})}
+          </div>
+        );})()}
+        {matches.length===0?<div style={{textAlign:"center",color:"#444",padding:"60px 0",fontSize:14}}>No matches found</div>:matches.map(m=><Card key={m.id} m={m} onPredict={doPredict} pred={preds[m.id]} loading={loading} lid={active} onFav={toggleFav} isFav={isFav}/>)}
+      </div>}
+      {tab==="favorites"&&<FavTab/>}
+      {tab==="history"&&<HistTab/>}
+      {tab==="profile"&&<ProfileTab/>}
+
+      {tab==="home"&&(
+        <div style={{position:"absolute",bottom:52,left:0,right:0,background:"linear-gradient(to top,#08080f 85%,transparent)",padding:"8px 0 4px"}}>
+          <div style={{display:"flex",gap:5,overflowX:"auto",padding:"0 14px",scrollbarWidth:"none"}}>
+            {LEAGUES.map(l=>(
+              <button key={l.id} onClick={()=>doPick(l.id)} style={{background:active===l.id?l.color+"33":"#ffffff08",border:"1px solid "+(active===l.id?l.color:"#ffffff10"),borderRadius:20,padding:"5px 11px",fontSize:10,color:active===l.id?"#fff":"#666",cursor:"pointer",whiteSpace:"nowrap",fontWeight:active===l.id?800:400,flexShrink:0}}>
+                {l.flag} {l.id.toUpperCase()}{!canAccess(l.id)?" 🔒":""}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#0d0d1a",borderTop:"1px solid #ffffff0f",height:52,display:"flex",alignItems:"center",zIndex:60}}>
+        {[{id:"home",icon:"⚽",label:"Matches"},{id:"favorites",icon:"⭐",label:"Favorites"},{id:"history",icon:"📊",label:"My Picks"},{id:"profile",icon:user?user.avatar:"👤",label:user?user.name.split(" ")[0]:"Profile"}].map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
+            <span style={{fontSize:tab===t.id?19:16}}>{t.icon}</span>
+            <span style={{fontSize:9,color:tab===t.id?"#00ff87":"#444",fontWeight:tab===t.id?800:400}}>{t.label}</span>
+            {tab===t.id&&<div style={{width:14,height:2,background:"#00ff87",borderRadius:1}}/>}
+          </button>
+        ))}
+      </div>
+
+      {paywallOpen&&(
+        <div style={{position:"fixed",inset:0,zIndex:300,background:"#000000ee",backdropFilter:"blur(8px)",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div style={{width:"100%",maxWidth:480,background:"linear-gradient(180deg,#0d0d1a,#08080f)",borderRadius:"26px 26px 0 0",padding:"0 0 36px"}}>
+            <div style={{width:"100%",height:3,background:"linear-gradient(90deg,transparent,#00ff87,transparent)",borderRadius:"3px 3px 0 0"}}/>
+            <div style={{padding:"20px 22px 0",textAlign:"center"}}>
+              <div style={{fontSize:30,marginBottom:5}}>🏆</div>
+              <div style={{fontFamily:"monospace",fontSize:19,fontWeight:900,background:"linear-gradient(90deg,#00ff87,#00d4ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:4}}>MatchMind Pro</div>
+              <div style={{fontSize:12,color:"#666",marginBottom:14}}>{inTrial?"Trial: "+trialDays+" days left":"Upgrade to continue"}</div>
+            </div>
+            <div style={{padding:"0 22px"}}>
+              {["All 13 leagues + World Cup 2026","Unlimited AI predictions","14-factor deep analysis","Rotation risk intelligence","No ads ever"].map((f,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                  <span style={{color:"#00ff87",fontSize:13}}>✓</span><span style={{fontSize:13,color:"#bbb"}}>{f}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{padding:"14px 22px 0",display:"flex",gap:10}}>
+              {[{id:"annual",l:"Best Value",p:"$29.99",per:"/year",s:"Save 50%",best:true},{id:"monthly",l:"Monthly",p:"$4.99",per:"/month",s:"Cancel anytime",best:false}].map(p=>(
+                <div key={p.id} onClick={()=>setPlan(p.id)} style={{flex:1,border:"2px solid "+(plan===p.id?"#00ff87":"#ffffff15"),borderRadius:13,padding:"11px 8px",textAlign:"center",cursor:"pointer",background:plan===p.id?"#00ff8710":"#ffffff05",position:"relative"}}>
+                  {p.best&&<div style={{position:"absolute",top:-9,left:"50%",transform:"translateX(-50%)",background:"linear-gradient(90deg,#00ff87,#00d4ff)",color:"#000",fontSize:9,fontWeight:900,padding:"2px 8px",borderRadius:20,whiteSpace:"nowrap"}}>BEST VALUE</div>}
+                  <div style={{fontSize:9,color:"#666",letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>{p.l}</div>
+                  <div style={{fontSize:21,fontWeight:900,color:"#fff"}}>{p.p}</div>
+                  <div style={{fontSize:10,color:"#555"}}>{p.per}</div>
+                  <div style={{fontSize:9,color:"#00ff87",marginTop:2}}>{p.s}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{padding:"13px 22px 0"}}>
+              <button onClick={doSubscribe} style={{width:"100%",background:"linear-gradient(135deg,#00ff87,#00d4ff)",color:"#000",border:"none",borderRadius:12,padding:"14px",fontSize:14,fontWeight:900,cursor:"pointer",boxShadow:"0 4px 20px #00ff8750"}}>{plan==="annual"?"Start Pro — $29.99/year":"Start Pro — $4.99/month"}</button>
+              {inTrial&&<button onClick={()=>setPaywallOpen(false)} style={{display:"block",width:"100%",marginTop:8,background:"transparent",border:"1px solid #ffffff10",borderRadius:10,padding:"10px",fontSize:12,color:"#555",cursor:"pointer"}}>Continue {trialDays}-day trial</button>}
+              <div style={{textAlign:"center",marginTop:10,fontSize:10,color:"#333",lineHeight:1.7}}>Billed via App Store or Google Play · Cancel anytime<br/><span style={{color:"#ff6b35"}}>For entertainment only · Not gambling advice</span></div>
+              <button onClick={()=>setPaywallOpen(false)} style={{display:"block",margin:"8px auto 0",background:"none",border:"none",color:"#333",fontSize:12,cursor:"pointer"}}>Maybe later</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {drawer&&(
+        <div style={{position:"absolute",inset:0,zIndex:100}}>
+          <div onClick={()=>setDrawer(false)} style={{position:"absolute",inset:0,background:"#000000bb",backdropFilter:"blur(4px)"}}/>
+          <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#111118",borderRadius:"20px 20px 0 0",padding:"0 0 40px",animation:"slideUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"85vh",overflowY:"auto"}}>
+            <div style={{display:"flex",justifyContent:"center",padding:"12px 0 6px"}}><div style={{width:40,height:4,background:"#333",borderRadius:2}}/></div>
+            <div style={{padding:"8px 20px 14px",fontSize:16,fontWeight:800}}>Select League</div>
+            {LEAGUES.map(l=>(
+              <button key={l.id} onClick={()=>doPick(l.id)} style={{display:"flex",alignItems:"center",gap:14,width:"100%",background:active===l.id?l.color+"18":"transparent",border:"none",borderLeft:active===l.id?"3px solid "+l.color:"3px solid transparent",padding:"13px 20px",cursor:"pointer",textAlign:"left"}}>
+                <span style={{fontSize:22}}>{l.flag}</span>
+                <div><div style={{fontSize:14,fontWeight:700,color:active===l.id?"#fff":"#aaa"}}>{l.name}</div><div style={{fontSize:11,color:"#555"}}>{(MATCHES[l.id]||[]).length} matches</div></div>
+                {!canAccess(l.id)&&<span style={{marginLeft:"auto",fontSize:11,color:"#555"}}>🔒 Pro</span>}
+                {active===l.id&&canAccess(l.id)&&<span style={{marginLeft:"auto",color:l.color,fontSize:16}}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+const root=ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(MatchMind));
+</script>
+</body>
+</html>
